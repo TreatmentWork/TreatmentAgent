@@ -1,0 +1,31 @@
+{
+  "name": "nodejsscanner",
+  "version": "0.0.1",
+  "author": "Rakesh Jaiswal",
+  "description": "Scan file using ClamAV using NodeJS.",
+  "main": "index.js",
+  "contributors": [
+  ],
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com"
+  },
+  "dependencies": {
+    "underscore": "1.5.x",
+    "express": ">=4.14.0",
+    "body-parser": ">=1.16.0"
+  },
+  "keywords": [
+    "clamav"
+  ],
+  "license": "Test",
+  "engines": {
+    "node": ">=4.2.0"
+  },
+  "bugs": {
+    "url": "https://github.com/"
+  }
+}
