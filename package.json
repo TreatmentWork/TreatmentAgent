@@ -2,7 +2,7 @@
   "name": "nodejsscanner",
   "version": "0.0.1",
   "author": "Rakesh Jaiswal",
-  "description": "Scan file using ClamAV using NodeJS.",
+  "description": "Scan file using NodeJS.",
   "main": "index.js",
   "contributors": [
   ],

@@ -1,0 +1,10 @@
+{
+    "remove_infected": false,
+    "quarantine_infected": false,
+    "scan_log": "/tmp/clamAVscan.log",
+    "debug_mode": true,
+    "clamscan": {
+        "path": "/usr/bin/clamscan",
+        "scan_archives": true
+      }
+}
