@@ -16,7 +16,8 @@
   "dependencies": {
     "underscore": "1.5.x",
     "express": ">=4.14.0",
-    "body-parser": ">=1.16.0"
+    "body-parser": ">=1.16.0",
+    "winston": "2.3.1"
   },
   "keywords": [
     "clamav"

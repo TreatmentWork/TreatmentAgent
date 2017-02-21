@@ -6,6 +6,7 @@
 var __ = require('underscore');
 var fs = require('fs');
 var execFile = require('child_process').execFile;
+var logger = require(appRoot + '/js/util/winstonConfig.js');
 
 // ****************************************************************************
 // NodeJSScanner class definition

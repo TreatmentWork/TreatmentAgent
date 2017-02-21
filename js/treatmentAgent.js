@@ -3,6 +3,7 @@ var bodyParser = require('body-parser');
 var clam = require('./clamConfig.js');
 var fs = require('fs');
 var commonConfig = require(appRoot + '/config/commonConfig.json');
+var logger = require(appRoot + '/js/util/winstonConfig.js');
 var app = express();
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -10,10 +11,12 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.set('port', process.env.PORT || commonConfig.port);
-app.set('host', process.env.HOST || '13.82.225.164');
+app.set('host', process.env.HOST || '127.0.0.1');
 
 app.post('/clamAV/scan', function(req, res) {
+	var requestId = req.body.requestId;
 	var scanFile = req.body.scanFile;
+	logger.info(requestId + 'Starting scan of single file.');
 	validateInput(scanFile, function (err, isValid) {
 		if (err) {
 			res.status(err.status || 500).send({msg: err.message, error : err});
@@ -23,6 +26,7 @@ app.post('/clamAV/scan', function(req, res) {
 					res.status(err.status || 500).send({msg: err.message, error : err});
 		    }
 				isDir(scanFile, function(status) {
+					logger.info(requestId + 'Finished scan of single file.');
 					if(!status) {
 				    if(is_infected) {
 				        res.send({msg: "File '" + scanFile +  "' is infected!"});
@@ -39,11 +43,14 @@ app.post('/clamAV/scan', function(req, res) {
 });
 
 app.post('/clamAV/multiscan', function(req, res) {
+	var requestId = req.body.requestId;
+	logger.info(requestId + 'Starting scan of multiple files.');
 	var body = [];
 	var result = '';
 	var is_infected = clam.scan_files(req.body.scanFiles,  function(a, good_files, bad_files) {
 			body.push({msg: "Good files:" + good_files});
 			body.push({msg: "Bad files:" + bad_files});
+			logger.info(requestId + 'Finished scan of multiple files.');
 			res.send(body);
 		 }, function(err, file, is_infected) {
 			if(err) {
@@ -58,11 +65,6 @@ app.post('/clamAV/multiscan', function(req, res) {
 		}	);
 	});
 
-
-
-app.listen(app.get('port'), function (req, res){
-  console.log('Treatment Agent is listening on port ' + app.get('host') + ':' + app.get('port'));
-});
 
 // Checking if supplied path is directory
 var isDir = function (file, callback) {
@@ -87,3 +89,10 @@ var validateInput = function  (file, callback) {
 		}
   });
 };
+
+var server = app.listen(app.get('port'), function (req, res){
+  console.log('Treatment Agent is listening on port ' + app.get('host') + ':' + app.get('port'));
+});
+
+// Never timeout as ClamAV scan could be very  long running process
+server.timeout = 0;
