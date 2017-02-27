@@ -23,16 +23,16 @@ app.post('/clamAV/singlescan', function(req, res) {
 	var reqIp = req.ip;
 	logger.debug('Clam AV request received from IP:' + reqIp);
 	logger.info(requestId + 'Starting scan of single files.');
-	logger.debug('requestId:' + requestId + 'vmName:' + vmName + 'configData:' + configData +'scanFile:' + scanFile);
+	logger.debug('requestId:' + requestId + ', vmName:' + vmName + ', configData:' + configData +', scanFile:' + scanFile);
 	res.send('Treament is being performed aysnchronously. Once treatment completes result will be sent to Treatment Controller.');
 
 	validateInput(scanFile, function (err, isValid) {
 		if (err) {
-			resultCallback.sendTreatmentResult(requestId, vmName, configData, {msg: err.message, error : err});
+			resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp, {msg: err.message, error : err});
 		} else {
 			var is_infected = clam.is_infected(scanFile, function(err, result, is_infected) {
 		    if(err) {
-					resultCallback.sendTreatmentResult(requestId, vmName, configData, {msg: err.message, error : err});
+					resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp,  {msg: err.message, error : err});
 		    }
 				isDir(scanFile, function(status) {
 					logger.info(requestId + 'Finished scan of single file.');
@@ -61,7 +61,7 @@ app.post('/clamAV/multiscan', function(req, res) {
 	var reqIp = req.ip;
 	logger.debug('Clam AV request received from IP:' + reqIp);
 	logger.info(requestId + 'Starting scan of multiple files.');
-	logger.debug('requestId:' + requestId + 'vmName:' + vmName + 'configData:' + configData +'scanFiles:' + scanFiles);
+	logger.debug('requestId:' + requestId + ', vmName:' + vmName + ', configData:' + configData +', scanFiles:' + scanFiles);
 	res.send('Treament is being performed aysnchronously. Once treatment completes result will be sent to Treatment Controller.');
 	var is_infected = clam.scan_files(scanFiles,  function(a, good_files, bad_files) {
 			var finalBody = [];
@@ -91,7 +91,7 @@ var isDir = function (file, callback) {
 	fs.stat(file, function (err, stats){
     if (err) {
       // Directory doesn't exist or something.
-      console.log('Directory doesn\'t exist ' + file);
+      logger.error('Directory doesn\'t exist ' + file);
     } else {
     	return callback(stats.isDirectory());
 		}
@@ -102,7 +102,7 @@ var isDir = function (file, callback) {
 var validateInput = function  (file, callback) {
 	fs.stat(file, function (err, stats){
     if (err) {
-      console.log(err);
+      logger.error(err);
 			return callback(err);
     } else {
     	return callback(null, true);
@@ -111,7 +111,7 @@ var validateInput = function  (file, callback) {
 };
 
 var server = app.listen(app.get('port'), function (req, res){
-  console.log('Treatment Agent is listening on port ' + app.get('host') + ':' + app.get('port'));
+  logger.info('Treatment Agent is listening on port ' + app.get('host') + ':' + app.get('port'));
 });
 
 // Never timeout as ClamAV scan could be very  long running process
