@@ -4,6 +4,8 @@ var clam = require('./clamConfig.js');
 var fs = require('fs');
 var commonConfig = require(appRoot + '/config/commonConfig.json');
 var logger = require(appRoot + '/js/util/winstonConfig.js');
+var resultCallback = require(appRoot + '/js/TreatmentResultCallback.js');
+
 var app = express();
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -13,29 +15,38 @@ app.use(bodyParser.json());
 app.set('port', process.env.PORT || commonConfig.port);
 app.set('host', process.env.HOST || '127.0.0.1');
 
-app.post('/clamAV/scan', function(req, res) {
+app.post('/clamAV/singlescan', function(req, res) {
 	var requestId = req.body.requestId;
 	var scanFile = req.body.scanFile;
-	logger.info(requestId + 'Starting scan of single file.');
+	var vmName = req.body.vmName;
+	var configData = req.body.configData;
+	var reqIp = req.ip;
+	logger.debug('Clam AV request received from IP:' + reqIp);
+	logger.info(requestId + 'Starting scan of single files.');
+	logger.debug('requestId:' + requestId + 'vmName:' + vmName + 'configData:' + configData +'scanFile:' + scanFile);
+	res.send('Treament is being performed aysnchronously. Once treatment completes result will be sent to Treatment Controller.');
+
 	validateInput(scanFile, function (err, isValid) {
 		if (err) {
-			res.status(err.status || 500).send({msg: err.message, error : err});
+			resultCallback.sendTreatmentResult(requestId, vmName, configData, {msg: err.message, error : err});
 		} else {
 			var is_infected = clam.is_infected(scanFile, function(err, result, is_infected) {
 		    if(err) {
-					res.status(err.status || 500).send({msg: err.message, error : err});
+					resultCallback.sendTreatmentResult(requestId, vmName, configData, {msg: err.message, error : err});
 		    }
 				isDir(scanFile, function(status) {
 					logger.info(requestId + 'Finished scan of single file.');
+					var body = [];
 					if(!status) {
 				    if(is_infected) {
-				        res.send({msg: "File '" + scanFile +  "' is infected!"});
+				        body.push({msg: "File '" + scanFile +  "' is infected!"});
 				    } else {
-				        res.send({msg: "File '" + scanFile +  "' is clean!"});
+				        body.push({msg: "File '" + scanFile +  "' is clean!"});
 				    }
 					} else {
-						  res.send(result);
+						  body.push(result);
 					}
+					resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp, body);
 				});
 			});
 		}
@@ -44,24 +55,33 @@ app.post('/clamAV/scan', function(req, res) {
 
 app.post('/clamAV/multiscan', function(req, res) {
 	var requestId = req.body.requestId;
+	var vmName = req.body.vmName;
+	var configData = req.body.configData;
+	var scanFiles = req.body.scanFiles;
+	var reqIp = req.ip;
+	logger.debug('Clam AV request received from IP:' + reqIp);
 	logger.info(requestId + 'Starting scan of multiple files.');
-	var body = [];
-	var result = '';
-	var is_infected = clam.scan_files(req.body.scanFiles,  function(a, good_files, bad_files) {
-			body.push({msg: "Good files:" + good_files});
-			body.push({msg: "Bad files:" + bad_files});
+	logger.debug('requestId:' + requestId + 'vmName:' + vmName + 'configData:' + configData +'scanFiles:' + scanFiles);
+	res.send('Treament is being performed aysnchronously. Once treatment completes result will be sent to Treatment Controller.');
+	var is_infected = clam.scan_files(scanFiles,  function(a, good_files, bad_files) {
+			var finalBody = [];
+			finalBody.push({msg: "Multiple scan files aggregated result..." });
+			finalBody.push({msg: "Good files:" + good_files});
+			finalBody.push({msg: "Bad files:" + bad_files});
 			logger.info(requestId + 'Finished scan of multiple files.');
-			res.send(body);
+			resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp, finalBody);
 		 }, function(err, file, is_infected) {
-			if(err) {
-				body.push({msg: err.message, error : err});
-			} else {
-				if(is_infected) {
-					body.push({msg: "File '" + file +  "' is infected!"});
+			 	var intermediateBody = [];
+				if(err) {
+					intermediateBody.push({msg: err.message, error : err});
 				} else {
-					body.push({msg: "File '" + file +  "' is clean!"});
+					if(is_infected) {
+						intermediateBody.push({msg: "File '" + file +  "' is infected!"});
+					} else {
+						intermediateBody.push({msg: "File '" + file +  "' is clean!"});
+					}
 				}
-			}
+				resultCallback.sendTreatmentResult(requestId, null, null, reqIp, intermediateBody);
 		}	);
 	});
 

@@ -6,5 +6,8 @@
     "clamscan": {
         "path": "/usr/bin/clamscan",
         "scan_archives": true
-      }
+      },
+    "port" : "8001",
+    "endpoint" :"/getClamAVTreatmentResults",
+    "timeout" :"600000"
 }
