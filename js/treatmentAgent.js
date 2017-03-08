@@ -3,8 +3,9 @@ var bodyParser = require('body-parser');
 var clam = require('./clamConfig.js');
 var fs = require('fs');
 var commonConfig = require(appRoot + '/config/commonConfig.json');
+var clamTAConfig = require(appRoot + '/config/clamAVConfig.json');
 var logger = require(appRoot + '/js/util/winstonConfig.js');
-var resultCallback = require(appRoot + '/js/TreatmentResultCallback.js');
+var resultCallback = require(appRoot + '/js/httpClient.js');
 
 var app = express();
 // parse application/x-www-form-urlencoded
@@ -27,12 +28,15 @@ app.post('/clamAV/singlescan', function(req, res) {
 	res.send('Treament is being performed aysnchronously. Once treatment completes result will be sent to Treatment Controller.');
 
 	validateInput(scanFile, function (err, isValid) {
+		var postData;
 		if (err) {
-			resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp, {msg: err.message, error : err});
+			postData = {"requestId" : requestId, "vmName": vmName, "configData": configData, "result" : {msg: err.message, error : err}};
+			resultCallback.sendHttpRequest(postData, clamTAConfig.endpoint, reqIp, clamTAConfig.port);
 		} else {
 			var is_infected = clam.is_infected(scanFile, function(err, result, is_infected) {
 		    if(err) {
-					resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp,  {msg: err.message, error : err});
+					postData = {"requestId" : requestId, "vmName": vmName, "configData": configData, "result" : {msg: err.message, error : err}};
+					resultCallback.sendHttpRequest(postData, clamTAConfig.endpoint, reqIp, clamTAConfig.port);
 		    }
 				isDir(scanFile, function(status) {
 					logger.info(requestId + 'Finished scan of single file.');
@@ -46,7 +50,8 @@ app.post('/clamAV/singlescan', function(req, res) {
 					} else {
 						  body.push(result);
 					}
-					resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp, body);
+					postData = {"requestId" : requestId, "vmName": vmName, "configData": configData, "result" : body};
+					resultCallback.sendHttpRequest(postData, clamTAConfig.endpoint, reqIp, clamTAConfig.port);
 				});
 			});
 		}
@@ -59,6 +64,7 @@ app.post('/clamAV/multiscan', function(req, res) {
 	var configData = req.body.configData;
 	var scanFiles = req.body.scanFiles;
 	var reqIp = req.ip;
+	var postData;
 	logger.debug('Clam AV request received from IP:' + reqIp);
 	logger.info(requestId + 'Starting scan of multiple files.');
 	logger.debug('requestId:' + requestId + ', vmName:' + vmName + ', configData:' + configData +', scanFiles:' + scanFiles);
@@ -69,7 +75,8 @@ app.post('/clamAV/multiscan', function(req, res) {
 			finalBody.push({msg: "Good files:" + good_files});
 			finalBody.push({msg: "Bad files:" + bad_files});
 			logger.info(requestId + 'Finished scan of multiple files.');
-			resultCallback.sendTreatmentResult(requestId, vmName, configData, reqIp, finalBody);
+			postData = {"requestId" : requestId, "vmName": vmName, "configData": configData, "result" : finalBody};
+			resultCallback.sendHttpRequest(postData, clamTAConfig.endpoint, reqIp, clamTAConfig.port);
 		 }, function(err, file, is_infected) {
 			 	var intermediateBody = [];
 				if(err) {
@@ -81,7 +88,8 @@ app.post('/clamAV/multiscan', function(req, res) {
 						intermediateBody.push({msg: "File '" + file +  "' is clean!"});
 					}
 				}
-				resultCallback.sendTreatmentResult(requestId, null, null, reqIp, intermediateBody);
+				postData = {"requestId" : requestId, "vmName": null, "configData": null, "result" : intermediateBody};
+				resultCallback.sendHttpRequest(postData, clamTAConfig.endpoint, reqIp, clamTAConfig.port);
 		}	);
 	});
 

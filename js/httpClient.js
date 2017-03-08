@@ -1,20 +1,18 @@
 var http = require('http');
 var bodyParser = require("body-parser");
-var clamTAConfig = require(appRoot + '/config/clamAVConfig.json');
+var commonConfig = require(appRoot + '/config/commonConfig.json');
 var logger = require(appRoot + '/js/util/winstonConfig.js');
 
-var  sendTreatmentResult = function  (requestId, vmName, configData, reqquestHostIp, result ) {
-    var postData = {"requestId" : requestId, "vmName": vmName, "configData": configData, "result" : result};
+var  sendHttpRequest = function  (postData, endPoint, host, port ) {
     var postDataJSON = JSON.stringify(postData);
-    logger.debug('Treatment Agent callback Result:' + postDataJSON);
     var headers = {
       'Content-Type': 'application/json',
       'Content-Length': postDataJSON.length
     };
     var options = {
-      host: reqquestHostIp,
-      port: clamTAConfig.port,
-      path: clamTAConfig.endpoint,
+      host: host,
+      port: port,
+      path: endPoint,
       method: 'POST',
       headers: headers
     };
@@ -28,25 +26,25 @@ var  sendTreatmentResult = function  (requestId, vmName, configData, reqquestHos
       });
       // response end
       resHttp.on('end', function () {
-        logger.info(requestId + 'Treatment Result callback response:' + callbackResponse);
+        logger.info(postData.requestId + 'HTTP response received:' + callbackResponse);
       });
       //response error
       resHttp.on('error', function (err) {
-        logger.error(requestId + 'Error:' + err);
+        logger.error(postData.requestId + 'Error:' + err);
       });
     });
 
-    reqHttp.setTimeout(parseInt(clamTAConfig.timeout), function (err) {
-      logger.error(requestId + 'Request Set Timeout occured after ' + clamTAConfig.timeout + ' milliseconds. Error details: ' + err);
+    reqHttp.setTimeout(parseInt(commonConfig.timeout), function (err) {
+      logger.error(postData.requestId + 'Request Set Timeout occured after ' + commonConfig.timeout + ' milliseconds. Error details: ' + err);
       reqHttp.abort();
     });
 
     // request error
     reqHttp.on('error', function (err) {
       if (err.code === "ECONNRESET") {
-        logger.error(requestId + 'Request Error Timeout occured after ' + clamTAConfig.timeout + ' milliseconds. Error details: ' + err);
+        logger.error(postData.requestId + 'Request Error Timeout occured after ' + commonConfig.timeout + ' milliseconds. Error details: ' + err);
       } else {
-        logger.error(requestId + err);
+        logger.error(postData.requestId + err);
       }
     });
 
@@ -55,10 +53,10 @@ var  sendTreatmentResult = function  (requestId, vmName, configData, reqquestHos
     reqHttp.end();
 
     // Do not wait for response. Response will be logged  for satus check
-    logger.info(requestId + 'ClamAV treatment result is sent.');
+    logger.info(postData.requestId + ' for endpoint[' + endPoint + '] callback result is sent: ' + postDataJSON);
 
 };
 
 module.exports = {
-    sendTreatmentResult: sendTreatmentResult
+    sendHttpRequest: sendHttpRequest
 };
